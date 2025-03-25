@@ -11,6 +11,10 @@ Model Context Protocol (MCP) is a technology that allows AI assistants like Clau
 - AI can help search, summarize, and analyze your Confluence documentation
 - Keeps sensitive information secure (the AI only sees what you share)
 
+<a href="https://glama.ai/mcp/servers/@aashari/mcp-server-atlassian-confluence">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@aashari/mcp-server-atlassian-confluence/badge" alt="Atlassian Confluence Server MCP server" />
+</a>
+
 This MCP server connects Claude, Cursor, or other compatible AI assistants with your Confluence instance, allowing them to search content, list spaces and pages, and access detailed documentation.
 
 ## Quick Start Guide
