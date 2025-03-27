@@ -6,7 +6,7 @@ import atlassianPagesCli from './atlassian.pages.cli.js';
 import atlassianSearchCli from './atlassian.search.cli.js';
 
 // Get the version from package.json
-const VERSION = '1.12.0'; // This should match the version in src/index.ts
+const VERSION = '1.12.1'; // This should match the version in src/index.ts
 const NAME = '@aashari/mcp-atlassian-confluence';
 const DESCRIPTION =
 	'A Model Context Protocol (MCP) server for Atlassian Confluence integration';

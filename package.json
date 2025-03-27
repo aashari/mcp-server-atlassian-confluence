@@ -1,6 +1,6 @@
 {
 	"name": "@aashari/mcp-server-atlassian-confluence",
-	"version": "1.12.0",
+	"version": "1.12.1",
 	"description": "A TypeScript-based Model Context Protocol (MCP) server for Atlassian Confluence integration. Provides tools for accessing and searching Confluence spaces, pages, and content to connect Claude/Anthropic AI systems to Confluence knowledge bases.",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
