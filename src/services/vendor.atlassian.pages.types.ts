@@ -138,7 +138,7 @@ export const WebResourceSchema = z.object({
 	key: z.string(),
 	contexts: z.array(z.string()),
 	superbatch: z.string(),
-	uris: z.record(z.string()),
+	uris: z.record(z.string(), z.string()),
 	tags: z.array(z.string()),
 });
 

@@ -3,8 +3,8 @@ import { Logger } from '../utils/logger.util.js';
 import { formatErrorForMcpTool } from '../utils/error.util.js';
 import {
 	ListSpacesToolArgs,
-	ListSpacesToolArgsType,
-	GetSpaceToolArgsType,
+	type ListSpacesToolArgsType,
+	type GetSpaceToolArgsType,
 	GetSpaceToolArgs,
 } from './atlassian.spaces.types.js';
 
@@ -20,7 +20,7 @@ import atlassianSpacesController from '../controllers/atlassian.spaces.controlle
  * @returns {Promise<{ content: Array<{ type: 'text', text: string }> }>} MCP response with formatted spaces list
  * @throws Will return error message if space listing fails
  */
-async function listSpaces(args: ListSpacesToolArgsType) {
+async function listSpaces(args: Record<string, unknown>) {
 	const toolLogger = Logger.forContext(
 		'tools/atlassian.spaces.tool.ts',
 		'listSpaces',
@@ -29,7 +29,9 @@ async function listSpaces(args: ListSpacesToolArgsType) {
 
 	try {
 		// Pass the args directly to the controller without any transformation
-		const result = await atlassianSpacesController.list(args);
+		const result = await atlassianSpacesController.list(
+			args as ListSpacesToolArgsType,
+		);
 
 		toolLogger.debug('Successfully retrieved spaces from controller');
 
@@ -57,7 +59,7 @@ async function listSpaces(args: ListSpacesToolArgsType) {
  * @returns {Promise<{ content: Array<{ type: 'text', text: string }> }>} MCP response with formatted space details
  * @throws Will return error message if space retrieval fails
  */
-async function getSpace(args: GetSpaceToolArgsType) {
+async function getSpace(args: Record<string, unknown>) {
 	const methodLogger = Logger.forContext(
 		'tools/atlassian.spaces.tool.ts',
 		'getSpace',
@@ -66,7 +68,9 @@ async function getSpace(args: GetSpaceToolArgsType) {
 
 	try {
 		// Call the controller to get space details with args directly
-		const result = await atlassianSpacesController.get(args);
+		const result = await atlassianSpacesController.get(
+			args as GetSpaceToolArgsType,
+		);
 
 		methodLogger.debug('Successfully retrieved space details');
 

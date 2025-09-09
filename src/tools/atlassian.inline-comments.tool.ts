@@ -76,19 +76,20 @@ type ListInlineCommentsArgs = z.infer<typeof ListInlineCommentsArgsSchema>;
  * Handle the request to list inline comments only for a page
  * @returns {Promise<{ content: Array<{ type: 'text', text: string }> }>} MCP response with formatted inline comments list
  */
-async function handleListInlineComments(args: ListInlineCommentsArgs) {
+async function handleListInlineComments(args: Record<string, unknown>) {
 	const methodLogger = logger.forMethod('handleListInlineComments');
 
 	try {
 		methodLogger.debug('Tool conf_ls_inline_comments called', args);
 
 		// Call the new controller method for inline comments
+		const typedArgs = args as ListInlineCommentsArgs;
 		const result = await atlassianCommentsController.listInlineComments({
-			pageId: args.pageId,
-			includeResolved: args.includeResolved,
-			sortBy: args.sortBy,
-			limit: args.limit,
-			start: args.start,
+			pageId: typedArgs.pageId,
+			includeResolved: typedArgs.includeResolved,
+			sortBy: typedArgs.sortBy,
+			limit: typedArgs.limit,
+			start: typedArgs.start,
 		});
 
 		// Format the response for MCP

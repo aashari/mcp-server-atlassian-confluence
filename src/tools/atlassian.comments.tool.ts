@@ -54,17 +54,18 @@ type ListPageCommentsArgs = z.infer<typeof ListPageCommentsArgsSchema>;
  * Handle the request to list comments for a page
  * @returns {Promise<{ content: Array<{ type: 'text', text: string }> }>} MCP response with formatted comments list
  */
-async function handleListPageComments(args: ListPageCommentsArgs) {
+async function handleListPageComments(args: Record<string, unknown>) {
 	const methodLogger = logger.forMethod('handleListPageComments');
 
 	try {
 		methodLogger.debug('Tool conf_ls_page_comments called', args);
 
 		// Call the controller with original args
+		const typedArgs = args as ListPageCommentsArgs;
 		const result = await atlassianCommentsController.listPageComments({
-			pageId: args.pageId,
-			limit: args.limit,
-			start: args.start,
+			pageId: typedArgs.pageId,
+			limit: typedArgs.limit,
+			start: typedArgs.start,
 		});
 
 		// Format the response for MCP

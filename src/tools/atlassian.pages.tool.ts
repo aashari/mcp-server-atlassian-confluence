@@ -1,11 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { Logger } from '../utils/logger.util.js';
 import { formatErrorForMcpTool } from '../utils/error.util.js';
 import atlassianPagesController from '../controllers/atlassian.pages.controller.js';
 import {
-	ListPagesToolArgsType,
+	type ListPagesToolArgsType,
 	ListPagesToolArgs,
-	GetPageToolArgsType,
+	type GetPageToolArgsType,
 	GetPageToolArgs,
 } from './atlassian.pages.types.js';
 
@@ -19,7 +20,7 @@ import {
  * @returns {Promise<{ content: Array<{ type: 'text', text: string }> }>} MCP response with formatted pages list
  * @throws Will return error message if page listing fails
  */
-async function listPages(args: ListPagesToolArgsType) {
+async function listPages(args: Record<string, unknown>) {
 	const methodLogger = Logger.forContext(
 		'tools/atlassian.pages.tool.ts',
 		'listPages',
@@ -30,7 +31,9 @@ async function listPages(args: ListPagesToolArgsType) {
 		methodLogger.debug('Calling controller with options:', args);
 
 		// With updated controller signature, we can pass the tool args directly
-		const result = await atlassianPagesController.list(args);
+		const result = await atlassianPagesController.list(
+			args as ListPagesToolArgsType,
+		);
 
 		methodLogger.debug('Successfully retrieved pages list');
 
@@ -58,7 +61,7 @@ async function listPages(args: ListPagesToolArgsType) {
  * @returns {Promise<{ content: Array<{ type: 'text', text: string }> }>} MCP response with formatted page details
  * @throws Will return error message if page retrieval fails
  */
-async function getPage(args: GetPageToolArgsType) {
+async function getPage(args: Record<string, unknown>) {
 	const methodLogger = Logger.forContext(
 		'tools/atlassian.pages.tool.ts',
 		'getPage',
@@ -67,7 +70,9 @@ async function getPage(args: GetPageToolArgsType) {
 
 	try {
 		// Call the controller to get page details - we can now pass args directly
-		const result = await atlassianPagesController.get(args);
+		const result = await atlassianPagesController.get(
+			args as GetPageToolArgsType,
+		);
 
 		methodLogger.debug('Successfully retrieved page details');
 
@@ -103,16 +108,32 @@ function registerTools(server: McpServer) {
 	toolLogger.debug('Registering Atlassian Pages tools...');
 
 	// Register the list pages tool
+	// Rename title field to avoid MCP SDK conflict
+	const listPagesSchema = z.object({
+		spaceIds: ListPagesToolArgs.shape.spaceIds,
+		spaceKeys: ListPagesToolArgs.shape.spaceKeys,
+		parentId: ListPagesToolArgs.shape.parentId,
+		pageTitle: ListPagesToolArgs.shape.title, // Renamed from 'title' to 'pageTitle'
+		status: ListPagesToolArgs.shape.status,
+		limit: ListPagesToolArgs.shape.limit,
+		cursor: ListPagesToolArgs.shape.cursor,
+		sort: ListPagesToolArgs.shape.sort,
+	});
 	server.tool(
 		'conf_ls_pages',
-		`Lists pages within specified spaces (by \`spaceId\` or \`spaceKey\`) or globally. Filters by \`title\` with SMART MATCHING: tries exact match first, automatically falls back to partial matching if no exact results found. Supports \`status\` (current, archived, etc.), sorting (\`sort\`) and pagination (\`limit\`, \`cursor\`). 
+		`Lists pages within specified spaces (by \`spaceId\` or \`spaceKey\`) or globally. Filters by \`pageTitle\` with SMART MATCHING: tries exact match first, automatically falls back to partial matching if no exact results found. Supports \`status\` (current, archived, etc.), sorting (\`sort\`) and pagination (\`limit\`, \`cursor\`). 
 - Returns a formatted list of pages including ID, title, status, space ID, author, version, and URL. 
 - Pagination information including next cursor value is included at the end of the returned text content.
-- SMART TITLE SEARCH: When using \`title\` parameter, if exact match fails, automatically searches for partial matches (e.g., "Balance" will find "Balance Reconciliation System").
+- SMART TITLE SEARCH: When using \`pageTitle\` parameter, if exact match fails, automatically searches for partial matches (e.g., "Balance" will find "Balance Reconciliation System").
 - For full-text content search or advanced queries, use the \`conf_search\` tool. 
 - Requires Confluence credentials.`,
-		ListPagesToolArgs.shape,
-		listPages,
+		listPagesSchema.shape,
+		async (args: Record<string, unknown>) => {
+			// Map pageTitle back to title for the controller
+			const mappedArgs = { ...args, title: args.pageTitle };
+			delete (mappedArgs as Record<string, unknown>).pageTitle;
+			return listPages(mappedArgs);
+		},
 	);
 
 	// Register the get page details tool
