@@ -17,6 +17,7 @@
     "prepare": "npm run build && node scripts/ensure-executable.js",
     "postinstall": "node scripts/ensure-executable.js",
     "test": "jest",
+    "test:quiet": "jest --silent",
     "test:coverage": "jest --coverage",
     "test:cli": "jest src/cli/.*\\.cli\\.test\\.ts --runInBand --testTimeout=60000",
     "lint": "eslint src --ext .ts --config eslint.config.mjs",
@@ -146,7 +147,10 @@
       "jsx",
       "json",
       "node"
-    ]
+    ],
+    "silent": false,
+    "verbose": false,
+    "setupFilesAfterEnv": []
   },
   "engines": {
     "node": ">=18.0.0"
