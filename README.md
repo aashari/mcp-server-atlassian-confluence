@@ -4,6 +4,8 @@ Transform how you access and interact with your team's knowledge by connecting C
 
 [![NPM Version](https://img.shields.io/npm/v/@aashari/mcp-server-atlassian-confluence)](https://www.npmjs.com/package/@aashari/mcp-server-atlassian-confluence)
 
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/aashari/mcp-server-atlassian-confluence)](https://archestra.ai/mcp-catalog/aashari__mcp-server-atlassian-confluence)
+
 ## What You Can Do
 
 ✅ **Ask AI about your documentation**: *"What's our API authentication process?"*  
