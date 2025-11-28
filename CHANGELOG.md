@@ -1,3 +1,47 @@
+# [3.0.0](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v2.1.1...v3.0.0) (2025-11-28)
+
+
+* refactor!: replace domain-specific tools with generic HTTP method tools ([81fc057](https://github.com/aashari/mcp-server-atlassian-confluence/commit/81fc057213303239377b4136abab54fa980d6b92))
+
+
+### BREAKING CHANGES
+
+* This replaces 8+ domain-specific tools with 5 generic HTTP method tools.
+
+Before (v2.x):
+  conf_ls_spaces, conf_get_space, conf_ls_pages, conf_get_page,
+  conf_search, conf_ls_comments, conf_add_comment, ...
+
+After (v3.0):
+  conf_get, conf_post, conf_put, conf_patch, conf_delete
+
+Migration examples:
+- conf_ls_spaces -> conf_get with path /wiki/api/v2/spaces
+- conf_get_page -> conf_get with path /wiki/api/v2/pages/{id}
+- conf_search -> conf_get with path /wiki/rest/api/search?cql=...
+- conf_add_comment -> conf_post with path /wiki/api/v2/pages/{id}/footer-comments
+
+New features:
+- Full Confluence API access via generic HTTP methods
+- JMESPath filtering support for response transformation
+- Consistent with Bitbucket v2.0 and Jira v3.0 patterns
+- PATCH method support for partial updates
+- Proper handling of 204 No Content responses
+
+Removed:
+- 8 domain-specific tools and their types
+- 5 controllers with formatters
+- 12 service files with vendor types
+- 7 utility files (ADF, markdown, pagination, etc.)
+- CLI tests for old commands
+
+Added:
+- src/tools/atlassian.api.tool.ts (5 generic tools)
+- src/tools/atlassian.api.types.ts (Zod schemas)
+- src/controllers/atlassian.api.controller.ts
+- src/cli/atlassian.api.cli.ts
+- src/utils/jq.util.ts (JMESPath wrapper)
+
 ## [2.1.1](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v2.1.0...v2.1.1) (2025-09-09)
 
 
