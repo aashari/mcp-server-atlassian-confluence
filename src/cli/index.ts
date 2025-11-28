@@ -2,10 +2,7 @@ import { Command } from 'commander';
 import { Logger } from '../utils/logger.util.js';
 import { VERSION, CLI_NAME } from '../utils/constants.util.js';
 
-import atlassianSpacesCli from './atlassian.spaces.cli.js';
-import atlassianPagesCli from './atlassian.pages.cli.js';
-import atlassianSearchCli from './atlassian.search.cli.js';
-import atlassianCommentsCli from './atlassian.comments.cli.js';
+import atlassianApiCommands from './atlassian.api.cli.js';
 
 // Package description
 const DESCRIPTION =
@@ -14,32 +11,30 @@ const DESCRIPTION =
 // Create a contextualized logger for this file
 const cliLogger = Logger.forContext('cli/index.ts');
 
+// Log CLI module initialization
+cliLogger.debug('Confluence CLI module initialized');
+
 export async function runCli(args: string[]) {
-	cliLogger.info(`Starting Confluence CLI v${VERSION}`);
+	const methodLogger = Logger.forContext('cli/index.ts', 'runCli');
+	methodLogger.debug('Running CLI with arguments', args);
 
 	const program = new Command();
+
 	program.name(CLI_NAME).description(DESCRIPTION).version(VERSION);
 
 	// Register CLI commands
-	cliLogger.debug('Registering CLI commands...');
-	atlassianSpacesCli.register(program);
-	atlassianPagesCli.register(program);
-	atlassianSearchCli.register(program);
-	atlassianCommentsCli.register(program);
-	cliLogger.debug('All CLI commands registered successfully');
+	atlassianApiCommands.register(program);
+	cliLogger.debug('API commands registered');
 
 	// Handle unknown commands
 	program.on('command:*', (operands) => {
-		cliLogger.error(`Unknown command: ${operands[0]}`);
+		methodLogger.error(`Unknown command: ${operands[0]}`);
 		console.log('');
 		program.help();
 		process.exit(1);
 	});
 
-	cliLogger.info(`Executing command: ${args.join(' ')}`);
-
 	// Parse arguments; default to help if no command provided
 	await program.parseAsync(args.length ? args : ['--help'], { from: 'user' });
-
-	cliLogger.info('CLI command execution completed');
+	methodLogger.debug('CLI command execution completed');
 }

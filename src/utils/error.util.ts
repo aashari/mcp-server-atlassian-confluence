@@ -1,5 +1,11 @@
 import { Logger } from './logger.util.js';
-import { formatSeparator } from './formatter.util.js';
+
+/**
+ * Format a simple separator line
+ */
+function formatSeparator(): string {
+	return '---';
+}
 
 /**
  * Error types for classification
@@ -10,6 +16,7 @@ export enum ErrorType {
 	API_ERROR = 'API_ERROR',
 	NOT_FOUND = 'NOT_FOUND',
 	UNEXPECTED_ERROR = 'UNEXPECTED_ERROR',
+	VALIDATION_ERROR = 'VALIDATION_ERROR',
 }
 
 /**
@@ -143,11 +150,11 @@ export function ensureMcpError(error: unknown): McpError {
 }
 
 /**
- * Format error for MCP tool response
+ * Format error for MCP tool response with vendor detail for AI.
  */
 export function formatErrorForMcpTool(error: unknown): {
 	content: Array<{ type: 'text'; text: string }>;
-	metadata?: {
+	metadata: {
 		errorType: ErrorType;
 		statusCode?: number;
 		errorDetails?: unknown;
@@ -158,10 +165,14 @@ export function formatErrorForMcpTool(error: unknown): {
 		'formatErrorForMcpTool',
 	);
 	const mcpError = ensureMcpError(error);
+
 	methodLogger.error(`${mcpError.type} error`, mcpError);
 
 	// Get the deep original error for additional context
 	const originalError = getDeepOriginalError(mcpError.originalError);
+
+	// Create a detailed message including the original error information
+	let detailedMessage = `Error: ${mcpError.message}`;
 
 	// Safely extract details from the original error
 	const errorDetails =
@@ -169,13 +180,24 @@ export function formatErrorForMcpTool(error: unknown): {
 			? { message: originalError.message }
 			: originalError;
 
+	// Add Confluence-specific error handling for display
+	if (originalError) {
+		let vendorText = '';
+		if (originalError instanceof Error) {
+			vendorText = originalError.message;
+		} else if (typeof originalError === 'object') {
+			vendorText = JSON.stringify(originalError);
+		} else {
+			vendorText = String(originalError);
+		}
+
+		if (!detailedMessage.includes(vendorText)) {
+			detailedMessage += `\nConfluence API Error: ${vendorText}`;
+		}
+	}
+
 	return {
-		content: [
-			{
-				type: 'text' as const,
-				text: `Error: ${mcpError.message}`,
-			},
-		],
+		content: [{ type: 'text' as const, text: detailedMessage }],
 		metadata: {
 			errorType: mcpError.type,
 			statusCode: mcpError.statusCode,
@@ -218,7 +240,7 @@ export function formatErrorForMcpResource(
 }
 
 /**
- * Handle error in CLI context with improved user feedback
+ * Handle error in CLI context
  */
 export function handleCliError(error: unknown): never {
 	const methodLogger = Logger.forContext(
@@ -226,106 +248,98 @@ export function handleCliError(error: unknown): never {
 		'handleCliError',
 	);
 	const mcpError = ensureMcpError(error);
-	methodLogger.error(`${mcpError.type} error`, mcpError);
 
-	// Get the deep original error for more context
-	const originalError = getDeepOriginalError(mcpError.originalError);
+	// Log detailed information at different levels based on error type
+	if (mcpError.statusCode && mcpError.statusCode >= 500) {
+		methodLogger.error(`${mcpError.type} error occurred`, {
+			message: mcpError.message,
+			statusCode: mcpError.statusCode,
+			stack: mcpError.stack,
+		});
+	} else {
+		methodLogger.warn(`${mcpError.type} error occurred`, {
+			message: mcpError.message,
+			statusCode: mcpError.statusCode,
+		});
+	}
 
-	// Build a well-formatted CLI output using markdown-style helpers
+	// Log additional debug information if DEBUG is enabled
+	methodLogger.debug('Error details', {
+		type: mcpError.type,
+		statusCode: mcpError.statusCode,
+		originalError: mcpError.originalError,
+		stack: mcpError.stack,
+	});
+
+	// Build structured CLI output
 	const cliLines: string[] = [];
-
-	// Primary error headline
 	cliLines.push(`❌  ${mcpError.message}`);
 
-	// Status code (if any)
 	if (mcpError.statusCode) {
 		cliLines.push(`HTTP Status: ${mcpError.statusCode}`);
 	}
 
-	// Separator
-	cliLines.push(formatSeparator());
-
 	// Provide helpful context based on error type
 	if (mcpError.type === ErrorType.AUTH_MISSING) {
 		cliLines.push(
-			'Tip: Make sure to set up your Atlassian credentials in the configuration file or environment variables:',
+			'\nTip: Make sure to set up your Atlassian credentials in the environment variables:',
 		);
-		cliLines.push(
-			'- ATLASSIAN_SITE_NAME, ATLASSIAN_USER_EMAIL, and ATLASSIAN_API_TOKEN',
-		);
+		cliLines.push('- ATLASSIAN_SITE_NAME');
+		cliLines.push('- ATLASSIAN_USER_EMAIL');
+		cliLines.push('- ATLASSIAN_API_TOKEN');
 	} else if (mcpError.type === ErrorType.AUTH_INVALID) {
 		cliLines.push(
-			'Tip: Check that your Atlassian API token is correct and has not expired.',
+			'\nTip: Check that your Atlassian API token is correct and has not expired.',
 		);
 		cliLines.push(
-			'Also verify that the configured user has access to the requested resource.',
+			'Verify your user has the required permissions to access the requested resource.',
 		);
-	} else if (mcpError.type === ErrorType.API_ERROR) {
-		if (mcpError.statusCode === 429) {
-			cliLines.push(
-				'Tip: You may have exceeded your Confluence API rate limits. Try again later.',
-			);
-		}
+	} else if (
+		mcpError.type === ErrorType.API_ERROR &&
+		mcpError.statusCode === 429
+	) {
+		cliLines.push(
+			'\nTip: You may have exceeded Confluence API rate limits. Try again later or space out your requests.',
+		);
 	} else if (mcpError.type === ErrorType.NOT_FOUND) {
 		cliLines.push(
-			'Tip: Verify the resource ID or key is correct and that you have access to view this resource.',
+			'\nTip: Verify the resource ID or key is correct and that you have access to view this resource.',
 		);
 		cliLines.push(
 			'If you are using a space key, make sure it is spelled correctly (including case).',
 		);
+	} else if (
+		mcpError.type === ErrorType.VALIDATION_ERROR &&
+		mcpError.message.includes('CQL')
+	) {
+		cliLines.push(
+			'\nTip: Check your CQL syntax. Refer to Confluence Query Language documentation for valid queries.',
+		);
 	}
 
-	// Vendor error details (if available)
-	if (originalError) {
-		cliLines.push('Confluence API Error:');
-		cliLines.push('```');
-		if (typeof originalError === 'object' && originalError !== null) {
-			// Try to extract the most useful parts of Confluence's error response
-			const origErr = originalError as Record<string, unknown>;
-			if (origErr.message) {
-				cliLines.push(`Message: ${origErr.message}`);
-			}
-			if (origErr.detail) {
-				cliLines.push(`Detail: ${origErr.detail}`);
-			}
-			if (origErr.title) {
-				cliLines.push(`Title: ${origErr.title}`);
-			}
-			if (origErr.status) {
-				cliLines.push(`Status: ${origErr.status}`);
-			}
+	cliLines.push(formatSeparator());
 
-			// Handle errors array format
-			if (
-				origErr.errors &&
-				Array.isArray(origErr.errors) &&
-				origErr.errors.length > 0
-			) {
-				cliLines.push('Errors:');
-				for (const err of origErr.errors) {
-					if (typeof err === 'object' && err !== null) {
-						const errObj = err as Record<string, unknown>;
-						cliLines.push(
-							`  - ${errObj.message || errObj.title || JSON.stringify(err)}`,
-						);
-					} else {
-						cliLines.push(`  - ${String(err)}`);
-					}
-				}
-			} else {
-				// Fall back to JSON representation for anything else
-				cliLines.push(JSON.stringify(originalError, null, 2));
-			}
+	// Include the deep original error details
+	const deepOriginal = getDeepOriginalError(mcpError.originalError);
+	if (deepOriginal) {
+		cliLines.push('Confluence API Error:');
+		let vendorText = '';
+		if (deepOriginal instanceof Error) {
+			vendorText = deepOriginal.message;
+		} else if (typeof deepOriginal === 'object') {
+			vendorText = JSON.stringify(deepOriginal, null, 2);
 		} else {
-			cliLines.push(String(originalError).trim());
+			vendorText = String(deepOriginal);
 		}
+		cliLines.push('```json');
+		cliLines.push(vendorText.trim());
 		cliLines.push('```');
 	}
 
 	// Display DEBUG tip
-	if (!process.env.DEBUG || !process.env.DEBUG.includes('mcp:')) {
+	if (!process.env.DEBUG) {
 		cliLines.push(
-			'For more detailed error information, run with DEBUG=mcp:* environment variable.',
+			'\nFor detailed error information, run with DEBUG=mcp:* environment variable.',
 		);
 	}
 

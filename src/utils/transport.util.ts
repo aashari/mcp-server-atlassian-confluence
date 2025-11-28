@@ -23,7 +23,7 @@ export interface AtlassianCredentials {
  * Interface for HTTP request options
  */
 export interface RequestOptions {
-	method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+	method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	headers?: Record<string, string>;
 	body?: unknown;
 }
@@ -261,12 +261,30 @@ export async function fetchAtlassian<T>(
 			}
 		}
 
-		// Clone the response to log its content without consuming it
-		const clonedResponse = response.clone();
-		const responseJson = await clonedResponse.json();
-		fetchLogger.debug(`Response body:`, responseJson);
+		// Handle 204 No Content responses (common for DELETE operations)
+		if (response.status === 204) {
+			fetchLogger.debug('Received 204 No Content response');
+			return {} as T;
+		}
 
-		return response.json() as Promise<T>;
+		// Handle empty responses (some endpoints return 200/201 with no body)
+		const responseText = await response.text();
+		if (!responseText || responseText.trim() === '') {
+			fetchLogger.debug('Received empty response body');
+			return {} as T;
+		}
+
+		// For JSON responses, parse the text we already read
+		try {
+			const responseJson = JSON.parse(responseText);
+			fetchLogger.debug(`Response body:`, responseJson);
+			return responseJson as T;
+		} catch {
+			fetchLogger.debug(
+				`Could not parse response as JSON, returning raw content`,
+			);
+			return responseText as unknown as T;
+		}
 	} catch (error) {
 		endTime = performance.now();
 		const failedRequestDuration = (endTime - startTime).toFixed(2);

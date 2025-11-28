@@ -10,12 +10,8 @@ import type { Request, Response } from 'express';
 import express from 'express';
 import cors from 'cors';
 
-// Import Confluence-specific tools
-import atlassianSpacesTools from './tools/atlassian.spaces.tool.js';
-import atlassianPagesTools from './tools/atlassian.pages.tool.js';
-import atlassianSearchTools from './tools/atlassian.search.tool.js';
-import atlassianCommentsTools from './tools/atlassian.comments.tool.js';
-import atlassianInlineCommentsTools from './tools/atlassian.inline-comments.tool.js';
+// Import tools
+import atlassianApiTools from './tools/atlassian.api.tool.js';
 
 // Create a contextualized logger for this file
 const indexLogger = Logger.forContext('index.ts');
@@ -66,22 +62,7 @@ export async function startServer(
 
 	// Register tools
 	serverLogger.info('Registering MCP tools...');
-
-	atlassianSpacesTools.registerTools(serverInstance);
-	serverLogger.debug('Registered Spaces tools');
-
-	atlassianPagesTools.registerTools(serverInstance);
-	serverLogger.debug('Registered Pages tools');
-
-	atlassianSearchTools.registerTools(serverInstance);
-	serverLogger.debug('Registered Search tools');
-
-	atlassianCommentsTools.registerTools(serverInstance);
-	serverLogger.debug('Registered Comments tools');
-
-	atlassianInlineCommentsTools.registerTools(serverInstance);
-	serverLogger.debug('Registered Inline Comments tools');
-
+	atlassianApiTools.registerTools(serverInstance);
 	serverLogger.info('All tools registered successfully');
 
 	if (mode === 'stdio') {
@@ -171,9 +152,9 @@ async function main() {
 
 	// CLI mode - if any arguments are provided
 	if (process.argv.length > 2) {
-		mainLogger.info('Starting in CLI mode');
+		mainLogger.info(`Starting ${PACKAGE_NAME} v${VERSION} in CLI mode`);
 		await runCli(process.argv.slice(2));
-		mainLogger.info('CLI execution completed');
+		mainLogger.info('CLI execution completed successfully');
 		return;
 	}
 

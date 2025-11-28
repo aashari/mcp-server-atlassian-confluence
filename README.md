@@ -6,18 +6,18 @@ Transform how you access and interact with your team's knowledge by connecting C
 
 ## What You Can Do
 
-✅ **Ask AI about your documentation**: *"What's our API authentication process?"*  
-✅ **Search across all spaces**: *"Find all pages about security best practices"*  
-✅ **Get instant answers**: *"Show me the latest release notes from the Product space"*  
-✅ **Access team knowledge**: *"What are our HR policies for remote work?"*  
-✅ **Review page comments**: *"Show me the discussion on the architecture document"*  
-✅ **Find specific content**: *"Search for pages with 'onboarding' in the title"*  
+- **Ask AI about your documentation**: "What's our API authentication process?"
+- **Search across all spaces**: "Find all pages about security best practices"
+- **Get instant answers**: "Show me the latest release notes from the Product space"
+- **Access team knowledge**: "What are our HR policies for remote work?"
+- **Review page comments**: "Show me the discussion on the architecture document"
+- **Create and update content**: "Create a new page in the DEV space"
 
 ## Perfect For
 
 - **Developers** who need quick access to technical documentation and API guides
 - **Product Managers** searching for requirements, specs, and project updates
-- **HR Teams** accessing policy documents and employee resources quickly  
+- **HR Teams** accessing policy documents and employee resources quickly
 - **Support Teams** finding troubleshooting guides and knowledge base articles
 - **Anyone** who wants to interact with Confluence using natural language
 
@@ -39,16 +39,16 @@ Generate a Confluence API Token:
 # Set your credentials
 export ATLASSIAN_SITE_NAME="your-company"  # for your-company.atlassian.net
 export ATLASSIAN_USER_EMAIL="your.email@company.com"
-export ATLASSIAN_API_TOKEN="your_copied_token"
+export ATLASSIAN_API_TOKEN="your_api_token"
 
 # List your Confluence spaces
-npx -y @aashari/mcp-server-atlassian-confluence ls-spaces
+npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces"
 
 # Get details about a specific space
-npx -y @aashari/mcp-server-atlassian-confluence get-space --space-key DEV
+npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces/123456"
 
-# Search for pages
-npx -y @aashari/mcp-server-atlassian-confluence search --query "API documentation"
+# Get a page with JMESPath filtering
+npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/pages/789" --jq "{id: id, title: title, status: status}"
 ```
 
 ## Connect to AI Assistants
@@ -73,7 +73,7 @@ Add this to your Claude configuration file (`~/.claude/claude_desktop_config.jso
 }
 ```
 
-Restart Claude Desktop, and you'll see "🔗 confluence" in the status bar.
+Restart Claude Desktop, and you'll see the confluence server in the status bar.
 
 ### For Other AI Assistants
 
@@ -94,7 +94,7 @@ Create `~/.mcp/configs.json` for system-wide configuration:
   "confluence": {
     "environments": {
       "ATLASSIAN_SITE_NAME": "your-company",
-      "ATLASSIAN_USER_EMAIL": "your.email@company.com", 
+      "ATLASSIAN_USER_EMAIL": "your.email@company.com",
       "ATLASSIAN_API_TOKEN": "your_api_token"
     }
   }
@@ -103,17 +103,70 @@ Create `~/.mcp/configs.json` for system-wide configuration:
 
 **Alternative config keys:** The system also accepts `"atlassian-confluence"`, `"@aashari/mcp-server-atlassian-confluence"`, or `"mcp-server-atlassian-confluence"` instead of `"confluence"`.
 
+## Available Tools
+
+This MCP server provides 5 generic tools that can access any Confluence API endpoint:
+
+| Tool | Description |
+|------|-------------|
+| `conf_get` | GET any Confluence API endpoint (read data) |
+| `conf_post` | POST to any endpoint (create resources) |
+| `conf_put` | PUT to any endpoint (replace resources) |
+| `conf_patch` | PATCH any endpoint (partial updates) |
+| `conf_delete` | DELETE any endpoint (remove resources) |
+
+### Common API Paths
+
+**Spaces:**
+- `/wiki/api/v2/spaces` - List all spaces
+- `/wiki/api/v2/spaces/{id}` - Get space details
+
+**Pages:**
+- `/wiki/api/v2/pages` - List pages (use `space-id` query param to filter)
+- `/wiki/api/v2/pages/{id}` - Get page details
+- `/wiki/api/v2/pages/{id}/body` - Get page body (use `body-format` param)
+- `/wiki/api/v2/pages/{id}/children` - Get child pages
+- `/wiki/api/v2/pages/{id}/labels` - Get page labels
+
+**Comments:**
+- `/wiki/api/v2/pages/{id}/footer-comments` - List/add footer comments
+- `/wiki/api/v2/pages/{id}/inline-comments` - List/add inline comments
+- `/wiki/api/v2/footer-comments/{comment-id}` - Get/update/delete comment
+
+**Blog Posts:**
+- `/wiki/api/v2/blogposts` - List blog posts
+- `/wiki/api/v2/blogposts/{id}` - Get blog post
+
+**Search:**
+- `/wiki/rest/api/search` - Search content (use `cql` query param)
+
+### JMESPath Filtering
+
+All tools support optional JMESPath (`jq`) filtering to extract specific data:
+
+```bash
+# Get just space names and keys
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/spaces" \
+  --jq "results[].{id: id, key: key, name: name}"
+
+# Get page title and status
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/pages/123456" \
+  --jq "{id: id, title: title, status: status}"
+```
+
 ## Real-World Examples
 
-### 📚 Explore Your Knowledge Base
+### Explore Your Knowledge Base
 
 Ask your AI assistant:
 - *"List all the spaces in our Confluence"*
-- *"Show me details about the Engineering space"*  
+- *"Show me details about the Engineering space"*
 - *"What pages are in our Product space?"*
 - *"Find the latest pages in the Marketing space"*
 
-### 🔍 Search and Find Information
+### Search and Find Information
 
 Ask your AI assistant:
 - *"Search for pages about API authentication"*
@@ -121,7 +174,7 @@ Ask your AI assistant:
 - *"Show me pages labeled with 'getting-started'"*
 - *"Search for content in the DEV space about deployment"*
 
-### 📄 Access Specific Content
+### Access Specific Content
 
 Ask your AI assistant:
 - *"Get the content of the API Authentication Guide page"*
@@ -129,20 +182,45 @@ Ask your AI assistant:
 - *"What's in our security policies page?"*
 - *"Display the latest release notes"*
 
-### 💬 Review Discussions
+### Create and Update Content
 
 Ask your AI assistant:
-- *"Show me comments on the architecture design document"*
-- *"What feedback was left on the new feature proposal?"*
-- *"Display discussion on the API changes page"*
+- *"Create a new page in the DEV space titled 'API Guide'"*
+- *"Add a comment to the architecture document"*
+- *"Update the page content with the new release info"*
 
-### 🎯 Advanced Searches
+## CLI Commands
 
-Ask your AI assistant:
-- *"Find all pages created by John in the last month"*
-- *"Show me archived pages in the Product space"*
-- *"Search for pages with both 'API' and 'tutorial' labels"*
-- *"Find documentation updated in the last week"*
+The CLI mirrors the MCP tools for direct terminal access:
+
+```bash
+# GET request
+npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces"
+
+# GET with query parameters
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/pages" \
+  --query-params '{"space-id": "123456", "limit": "10"}'
+
+# POST request (create a page)
+npx -y @aashari/mcp-server-atlassian-confluence post \
+  --path "/wiki/api/v2/pages" \
+  --body '{"spaceId": "123456", "status": "current", "title": "New Page", "body": {"representation": "storage", "value": "<p>Content here</p>"}}'
+
+# POST request (add a comment)
+npx -y @aashari/mcp-server-atlassian-confluence post \
+  --path "/wiki/api/v2/pages/789/footer-comments" \
+  --body '{"body": {"representation": "storage", "value": "<p>My comment</p>"}}'
+
+# PUT request (update page - requires version increment)
+npx -y @aashari/mcp-server-atlassian-confluence put \
+  --path "/wiki/api/v2/pages/789" \
+  --body '{"id": "789", "status": "current", "title": "Updated Title", "spaceId": "123456", "body": {"representation": "storage", "value": "<p>Updated content</p>"}, "version": {"number": 2}}'
+
+# DELETE request
+npx -y @aashari/mcp-server-atlassian-confluence delete \
+  --path "/wiki/api/v2/pages/789"
+```
 
 ## Troubleshooting
 
@@ -150,47 +228,43 @@ Ask your AI assistant:
 
 1. **Check your API Token permissions**:
    - Go to [Atlassian API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
-   - Make sure your token is still active and has the right permissions
+   - Make sure your token is still active and hasn't expired
 
-2. **Verify your site name**:
-   ```bash
-   # Test your credentials work
-   npx -y @aashari/mcp-server-atlassian-confluence ls-spaces
-   ```
-
-3. **Check your site name format**:
+2. **Verify your site name format**:
    - If your Confluence URL is `https://mycompany.atlassian.net`
    - Your site name should be just `mycompany`
 
-### "Space not found" or "Page not found"
-
-1. **Check space key spelling**:
+3. **Test your credentials**:
    ```bash
-   # List your spaces to see the correct keys
-   npx -y @aashari/mcp-server-atlassian-confluence ls-spaces
+   npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces?limit=1"
    ```
 
+### "Resource not found" or "404"
+
+1. **Check the API path**:
+   - Paths are case-sensitive
+   - Use numeric IDs for spaces and pages (not keys)
+   - Verify the resource exists in your browser
+
 2. **Verify access permissions**:
-   - Make sure you have access to the space in your browser
-   - Some spaces may be restricted to certain users
+   - Make sure you have access to the space/page in your browser
+   - Some content may be restricted to certain users
 
 ### "No results found" when searching
 
-1. **Try broader search terms**:
-   - Use single keywords instead of full phrases
-   - Try different variations of your search terms
+1. **Try different search terms**:
+   - Use CQL syntax for advanced searches
+   - Try broader search criteria
 
-2. **Check space permissions**:
-   - You can only search content you have permission to view
-   - Ask your admin if you should have access to specific spaces
+2. **Check CQL syntax**:
+   - Validate your CQL in Confluence's advanced search first
 
 ### Claude Desktop Integration Issues
 
 1. **Restart Claude Desktop** after updating the config file
-2. **Check the status bar** for the "🔗 confluence" indicator
-3. **Verify config file location**:
+2. **Verify config file location**:
    - macOS: `~/.claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ### Getting Help
 
@@ -204,23 +278,23 @@ If you're still having issues:
 ### What permissions do I need?
 
 Your Atlassian account needs:
-- **Read access** to the Confluence spaces you want to search
+- **Access to Confluence** with the appropriate permissions for the spaces you want to query
 - **API token** with appropriate permissions (automatically granted when you create one)
 
 ### Can I use this with Confluence Server (on-premise)?
 
-Currently, this tool only supports **Confluence Cloud**. Confluence Server support may be added in future versions.
+Currently, this tool only supports **Confluence Cloud**. Confluence Server/Data Center support may be added in future versions.
 
 ### How do I find my site name?
 
 Your site name is the first part of your Confluence URL:
-- URL: `https://mycompany.atlassian.net` → Site name: `mycompany`
-- URL: `https://acme-corp.atlassian.net` → Site name: `acme-corp`
+- URL: `https://mycompany.atlassian.net` -> Site name: `mycompany`
+- URL: `https://acme-corp.atlassian.net` -> Site name: `acme-corp`
 
 ### What AI assistants does this work with?
 
 Any AI assistant that supports the Model Context Protocol (MCP):
-- Claude Desktop (most popular)
+- Claude Desktop
 - Cursor AI
 - Continue.dev
 - Many others
@@ -235,7 +309,35 @@ Yes! This tool:
 
 ### Can I search across all my spaces at once?
 
-Yes! When you don't specify a space, searches will look across all spaces you have access to.
+Yes! Use CQL queries for cross-space searches. For example:
+```bash
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/rest/api/search" \
+  --query-params '{"cql": "type=page AND text~\"API documentation\""}'
+```
+
+## Migration from v2.x
+
+Version 3.0 replaces 8+ specific tools with 5 generic HTTP method tools. If you're upgrading from v2.x:
+
+**Before (v2.x):**
+```
+conf_ls_spaces, conf_get_space, conf_ls_pages, conf_get_page,
+conf_search, conf_ls_comments, conf_add_comment, ...
+```
+
+**After (v3.0):**
+```
+conf_get, conf_post, conf_put, conf_patch, conf_delete
+```
+
+**Migration examples:**
+- `conf_ls_spaces` -> `conf_get` with path `/wiki/api/v2/spaces`
+- `conf_get_space` -> `conf_get` with path `/wiki/api/v2/spaces/{id}`
+- `conf_ls_pages` -> `conf_get` with path `/wiki/api/v2/pages?space-id={id}`
+- `conf_get_page` -> `conf_get` with path `/wiki/api/v2/pages/{id}`
+- `conf_search` -> `conf_get` with path `/wiki/rest/api/search?cql=...`
+- `conf_add_comment` -> `conf_post` with path `/wiki/api/v2/pages/{id}/footer-comments`
 
 ## Support
 
@@ -248,4 +350,4 @@ Need help? Here's how to get assistance:
 
 ---
 
-*Made with ❤️ for teams who want to bring AI into their knowledge management workflow.*
+*Made with care for teams who want to bring AI into their knowledge management workflow.*

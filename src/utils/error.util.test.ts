@@ -155,7 +155,9 @@ describe('Error Utilities', () => {
 
 			expect(formatted).toHaveProperty('content');
 			expect(formatted.content[0].type).toBe('text');
-			expect(formatted.content[0].text).toBe('Error: Resource not found');
+			expect(formatted.content[0].text).toContain(
+				'Error: Resource not found',
+			);
 
 			expect(formatted).toHaveProperty('metadata');
 			expect(formatted.metadata?.errorType).toBe(ErrorType.API_ERROR);
@@ -176,7 +178,9 @@ describe('Error Utilities', () => {
 
 			const formatted = formatErrorForMcpTool(topError);
 
-			expect(formatted.content[0].text).toBe('Error: Resource not found');
+			expect(formatted.content[0].text).toContain(
+				'Error: Resource not found',
+			);
 			expect(formatted.metadata?.errorDetails).toEqual(deepError);
 		});
 	});
