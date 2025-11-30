@@ -125,26 +125,27 @@ function registerTools(server: McpServer) {
 	// Register the GET tool
 	server.tool(
 		'conf_get',
-		`Read any Confluence data. Returns JSON, optionally filtered with JMESPath (\`jq\` param).
+		`Read any Confluence data. Returns TOON format by default (30-60% fewer tokens than JSON).
+
+**IMPORTANT - Cost Optimization:**
+- ALWAYS use \`jq\` param to filter response fields. Unfiltered responses are very expensive!
+- Use \`limit\` query param to restrict result count (e.g., \`limit: "5"\`)
+- If unsure about available fields, first fetch ONE item with \`limit: "1"\` and NO jq filter to explore the schema, then use jq in subsequent calls
+
+**Schema Discovery Pattern:**
+1. First call: \`path: "/wiki/api/v2/spaces", queryParams: {"limit": "1"}\` (no jq) - explore available fields
+2. Then use: \`jq: "results[*].{id: id, key: key, name: name}"\` - extract only what you need
+
+**Output format:** TOON (default, token-efficient) or JSON (\`outputFormat: "json"\`)
 
 **Common paths:**
-- \`/wiki/api/v2/spaces\` - list all spaces
-- \`/wiki/api/v2/spaces/{id}\` - get space details
-- \`/wiki/api/v2/pages\` - list pages (use \`space-id\` query param to filter)
+- \`/wiki/api/v2/spaces\` - list spaces
+- \`/wiki/api/v2/pages\` - list pages (use \`space-id\` query param)
 - \`/wiki/api/v2/pages/{id}\` - get page details
-- \`/wiki/api/v2/pages/{id}/body\` - get page body (use \`body-format\` param: storage, atlas_doc_format, view)
-- \`/wiki/api/v2/pages/{id}/children\` - get child pages
-- \`/wiki/api/v2/pages/{id}/labels\` - get page labels
-- \`/wiki/api/v2/pages/{id}/footer-comments\` - get page comments
-- \`/wiki/api/v2/blogposts\` - list blog posts
-- \`/wiki/api/v2/blogposts/{id}\` - get blog post
-- \`/wiki/api/v2/labels/{id}\` - get label details
-- \`/wiki/api/v2/content/{id}/attachments\` - get content attachments
-- \`/wiki/rest/api/search\` - search content (use \`cql\` query param)
+- \`/wiki/api/v2/pages/{id}/body\` - get page body (\`body-format\`: storage, atlas_doc_format, view)
+- \`/wiki/rest/api/search\` - search content (\`cql\` query param)
 
-**Query params:** \`limit\` (page size, default 25), \`cursor\` (pagination), \`space-id\` (filter by space), \`body-format\` (storage, atlas_doc_format, view)
-
-**Example CQL queries:** \`type=page AND space=DEV\`, \`title~"search term"\`, \`label=important\`, \`creator=currentUser()\`
+**JQ examples:** \`results[*].id\`, \`results[0]\`, \`results[*].{id: id, title: title}\`
 
 API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 		GetApiToolArgs.shape,
@@ -154,24 +155,25 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 	// Register the POST tool
 	server.tool(
 		'conf_post',
-		`Create Confluence resources. Returns JSON, optionally filtered with JMESPath (\`jq\` param).
+		`Create Confluence resources. Returns TOON format by default (token-efficient).
+
+**IMPORTANT - Cost Optimization:**
+- Use \`jq\` param to extract only needed fields from response (e.g., \`jq: "{id: id, title: title}"\`)
+- Unfiltered responses include all metadata and are expensive!
+
+**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
 
 **Common operations:**
 
 1. **Create page:** \`/wiki/api/v2/pages\`
-   body: \`{"spaceId": "123456", "status": "current", "title": "Page Title", "parentId": "789", "body": {"representation": "storage", "value": "<p>Content here</p>"}}\`
+   body: \`{"spaceId": "123456", "status": "current", "title": "Page Title", "parentId": "789", "body": {"representation": "storage", "value": "<p>Content</p>"}}\`
 
 2. **Create blog post:** \`/wiki/api/v2/blogposts\`
-   body: \`{"spaceId": "123456", "status": "current", "title": "Blog Title", "body": {"representation": "storage", "value": "<p>Blog content</p>"}}\`
+   body: \`{"spaceId": "123456", "status": "current", "title": "Blog Title", "body": {"representation": "storage", "value": "<p>Content</p>"}}\`
 
-3. **Add label to page:** \`/wiki/api/v2/pages/{id}/labels\`
-   body: \`{"name": "label-name"}\` (labels must be lowercase, no spaces)
+3. **Add label:** \`/wiki/api/v2/pages/{id}/labels\` - body: \`{"name": "label-name"}\`
 
-4. **Add footer comment:** \`/wiki/api/v2/pages/{id}/footer-comments\`
-   body: \`{"body": {"representation": "storage", "value": "<p>Comment text</p>"}}\`
-
-5. **Create inline comment:** \`/wiki/api/v2/pages/{id}/inline-comments\`
-   body: \`{"body": {"representation": "storage", "value": "<p>Inline comment</p>"}, "inlineCommentProperties": {"textSelection": "text to anchor to"}}\`
+4. **Add comment:** \`/wiki/api/v2/pages/{id}/footer-comments\`
 
 API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 		RequestWithBodyArgs.shape,
@@ -181,18 +183,23 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 	// Register the PUT tool
 	server.tool(
 		'conf_put',
-		`Replace Confluence resources (full update). Returns JSON, optionally filtered with JMESPath (\`jq\` param).
+		`Replace Confluence resources (full update). Returns TOON format by default.
+
+**IMPORTANT - Cost Optimization:**
+- Use \`jq\` param to extract only needed fields from response
+- Example: \`jq: "{id: id, version: version.number}"\`
+
+**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
 
 **Common operations:**
 
 1. **Update page:** \`/wiki/api/v2/pages/{id}\`
-   body: \`{"id": "123", "status": "current", "title": "Updated Title", "spaceId": "456", "body": {"representation": "storage", "value": "<p>Updated content</p>"}, "version": {"number": 2, "message": "Update reason"}}\`
-   Note: version.number must be incremented from current version
+   body: \`{"id": "123", "status": "current", "title": "Updated Title", "spaceId": "456", "body": {"representation": "storage", "value": "<p>Content</p>"}, "version": {"number": 2}}\`
+   Note: version.number must be incremented
 
 2. **Update blog post:** \`/wiki/api/v2/blogposts/{id}\`
-   body: \`{"id": "123", "status": "current", "title": "Updated Blog", "spaceId": "456", "body": {"representation": "storage", "value": "<p>Updated content</p>"}, "version": {"number": 2}}\`
 
-Note: PUT replaces the entire resource. Version number must be incremented.
+Note: PUT replaces entire resource. Version number must be incremented.
 
 API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 		RequestWithBodyArgs.shape,
@@ -202,19 +209,20 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 	// Register the PATCH tool
 	server.tool(
 		'conf_patch',
-		`Partially update Confluence resources. Returns JSON, optionally filtered with JMESPath (\`jq\` param).
+		`Partially update Confluence resources. Returns TOON format by default.
+
+**IMPORTANT - Cost Optimization:** Use \`jq\` param to filter response fields.
+
+**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
 
 **Common operations:**
 
-Note: Confluence v2 API primarily uses PUT for updates. PATCH is available for some endpoints:
-
 1. **Update space:** \`/wiki/api/v2/spaces/{id}\`
-   body: \`{"name": "New Space Name", "description": {"plain": {"value": "Description", "representation": "plain"}}}\`
+   body: \`{"name": "New Name", "description": {"plain": {"value": "Desc", "representation": "plain"}}}\`
 
-2. **Update footer comment:** \`/wiki/api/v2/footer-comments/{comment-id}\`
-   body: \`{"version": {"number": 2}, "body": {"representation": "storage", "value": "<p>Updated comment</p>"}}\`
+2. **Update comment:** \`/wiki/api/v2/footer-comments/{id}\`
 
-For page content updates, use PUT with the full page object including incremented version number.
+Note: Confluence v2 API primarily uses PUT for updates.
 
 API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 		RequestWithBodyArgs.shape,
@@ -224,24 +232,16 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 	// Register the DELETE tool
 	server.tool(
 		'conf_delete',
-		`Delete Confluence resources. Returns JSON (if any), optionally filtered with JMESPath (\`jq\` param).
+		`Delete Confluence resources. Returns TOON format by default.
+
+**Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
 
 **Common operations:**
-
-1. **Delete page:** \`/wiki/api/v2/pages/{id}\`
-   Returns 204 No Content on success
-
-2. **Delete blog post:** \`/wiki/api/v2/blogposts/{id}\`
-   Returns 204 No Content on success
-
-3. **Remove label from page:** \`/wiki/api/v2/pages/{id}/labels/{label-id}\`
-   Returns 204 No Content on success
-
-4. **Delete comment:** \`/wiki/api/v2/footer-comments/{comment-id}\`
-   Returns 204 No Content on success
-
-5. **Delete attachment:** \`/wiki/api/v2/attachments/{attachment-id}\`
-   Returns 204 No Content on success
+- \`/wiki/api/v2/pages/{id}\` - Delete page
+- \`/wiki/api/v2/blogposts/{id}\` - Delete blog post
+- \`/wiki/api/v2/pages/{id}/labels/{label-id}\` - Remove label
+- \`/wiki/api/v2/footer-comments/{id}\` - Delete comment
+- \`/wiki/api/v2/attachments/{id}\` - Delete attachment
 
 Note: Most DELETE endpoints return 204 No Content on success.
 
