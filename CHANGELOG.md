@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v3.0.0...v3.1.0) (2025-11-30)
+
+
+### Features
+
+* add TOON output format for token-efficient LLM responses ([#145](https://github.com/aashari/mcp-server-atlassian-confluence/issues/145)) ([33ffa7b](https://github.com/aashari/mcp-server-atlassian-confluence/commit/33ffa7b0477efb05eb185c582d480f09daee6c88))
+
 # [3.0.0](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v2.1.1...v3.0.0) (2025-11-28)
 
 
