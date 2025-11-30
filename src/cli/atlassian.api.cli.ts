@@ -68,6 +68,7 @@ function registerReadCommand(
 		path: string;
 		queryParams?: Record<string, string>;
 		jq?: string;
+		outputFormat?: 'toon' | 'json';
 	}) => Promise<{ content: string }>,
 ): void {
 	program
@@ -84,6 +85,11 @@ function registerReadCommand(
 		.option(
 			'--jq <expression>',
 			'JMESPath expression to filter/transform the response.',
+		)
+		.option(
+			'-o, --output-format <format>',
+			'Output format: "toon" (default, token-efficient) or "json".',
+			'toon',
 		)
 		.action(async (options) => {
 			const actionLogger = cliLogger.forMethod(name);
@@ -103,6 +109,7 @@ function registerReadCommand(
 					path: options.path,
 					queryParams,
 					jq: options.jq,
+					outputFormat: options.outputFormat as 'toon' | 'json',
 				});
 
 				console.log(result.content);
@@ -128,6 +135,7 @@ function registerWriteCommand(
 		body: Record<string, unknown>;
 		queryParams?: Record<string, string>;
 		jq?: string;
+		outputFormat?: 'toon' | 'json';
 	}) => Promise<{ content: string }>,
 ): void {
 	program
@@ -142,6 +150,11 @@ function registerWriteCommand(
 		.option(
 			'--jq <expression>',
 			'JMESPath expression to filter/transform the response.',
+		)
+		.option(
+			'-o, --output-format <format>',
+			'Output format: "toon" (default, token-efficient) or "json".',
+			'toon',
 		)
 		.action(async (options) => {
 			const actionLogger = cliLogger.forMethod(name);
@@ -168,6 +181,7 @@ function registerWriteCommand(
 					body,
 					queryParams,
 					jq: options.jq,
+					outputFormat: options.outputFormat as 'toon' | 'json',
 				});
 
 				console.log(result.content);

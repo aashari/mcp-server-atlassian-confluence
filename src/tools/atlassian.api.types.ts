@@ -1,8 +1,20 @@
 import { z } from 'zod';
 
 /**
+ * Output format options for API responses
+ * - toon: Token-Oriented Object Notation (default, more token-efficient for LLMs)
+ * - json: Standard JSON format
+ */
+export const OutputFormat = z
+	.enum(['toon', 'json'])
+	.optional()
+	.describe(
+		'Output format: "toon" (default, 30-60% fewer tokens) or "json". TOON is optimized for LLMs with tabular arrays and minimal syntax.',
+	);
+
+/**
  * Base schema fields shared by all API tool arguments
- * Contains path, queryParams, and jq filter
+ * Contains path, queryParams, jq filter, and outputFormat
  */
 const BaseApiToolArgs = {
 	/**
@@ -33,13 +45,20 @@ const BaseApiToolArgs = {
 
 	/**
 	 * Optional JMESPath expression to filter/transform the response
+	 * IMPORTANT: Always use this to reduce response size and token costs
 	 */
 	jq: z
 		.string()
 		.optional()
 		.describe(
-			'JMESPath expression to filter/transform the JSON response. Examples: "results[*].id" (extract IDs), "results[0]" (first result), "{id: id, title: title}" (reshape object). See https://jmespath.org for syntax.',
+			'JMESPath expression to filter/transform the response. IMPORTANT: Always use this to extract only needed fields and reduce token costs. Examples: "results[*].{id: id, title: title}" (extract specific fields), "results[0]" (first result), "results[*].id" (IDs only). See https://jmespath.org',
 		),
+
+	/**
+	 * Output format for the response
+	 * Defaults to TOON (token-efficient), can be set to JSON if needed
+	 */
+	outputFormat: OutputFormat,
 };
 
 /**
