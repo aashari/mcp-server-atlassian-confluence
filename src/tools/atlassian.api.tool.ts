@@ -112,20 +112,8 @@ const put = createWriteHandler('PUT', handlePut);
 const patch = createWriteHandler('PATCH', handlePatch);
 const del = createReadHandler('DELETE', handleDelete);
 
-/**
- * Register generic Confluence API tools with the MCP server.
- */
-function registerTools(server: McpServer) {
-	const registerLogger = Logger.forContext(
-		'tools/atlassian.api.tool.ts',
-		'registerTools',
-	);
-	registerLogger.debug('Registering API tools...');
-
-	// Register the GET tool
-	server.tool(
-		'conf_get',
-		`Read any Confluence data. Returns TOON format by default (30-60% fewer tokens than JSON).
+// Tool descriptions
+const CONF_GET_DESCRIPTION = `Read any Confluence data. Returns TOON format by default (30-60% fewer tokens than JSON).
 
 **IMPORTANT - Cost Optimization:**
 - ALWAYS use \`jq\` param to filter response fields. Unfiltered responses are very expensive!
@@ -147,15 +135,9 @@ function registerTools(server: McpServer) {
 
 **JQ examples:** \`results[*].id\`, \`results[0]\`, \`results[*].{id: id, title: title}\`
 
-API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
-		GetApiToolArgs.shape,
-		get,
-	);
+API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`;
 
-	// Register the POST tool
-	server.tool(
-		'conf_post',
-		`Create Confluence resources. Returns TOON format by default (token-efficient).
+const CONF_POST_DESCRIPTION = `Create Confluence resources. Returns TOON format by default (token-efficient).
 
 **IMPORTANT - Cost Optimization:**
 - Use \`jq\` param to extract only needed fields from response (e.g., \`jq: "{id: id, title: title}"\`)
@@ -175,15 +157,9 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 
 4. **Add comment:** \`/wiki/api/v2/pages/{id}/footer-comments\`
 
-API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
-		RequestWithBodyArgs.shape,
-		post,
-	);
+API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`;
 
-	// Register the PUT tool
-	server.tool(
-		'conf_put',
-		`Replace Confluence resources (full update). Returns TOON format by default.
+const CONF_PUT_DESCRIPTION = `Replace Confluence resources (full update). Returns TOON format by default.
 
 **IMPORTANT - Cost Optimization:**
 - Use \`jq\` param to extract only needed fields from response
@@ -201,15 +177,9 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 
 Note: PUT replaces entire resource. Version number must be incremented.
 
-API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
-		RequestWithBodyArgs.shape,
-		put,
-	);
+API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`;
 
-	// Register the PATCH tool
-	server.tool(
-		'conf_patch',
-		`Partially update Confluence resources. Returns TOON format by default.
+const CONF_PATCH_DESCRIPTION = `Partially update Confluence resources. Returns TOON format by default.
 
 **IMPORTANT - Cost Optimization:** Use \`jq\` param to filter response fields.
 
@@ -224,15 +194,9 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 
 Note: Confluence v2 API primarily uses PUT for updates.
 
-API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
-		RequestWithBodyArgs.shape,
-		patch,
-	);
+API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`;
 
-	// Register the DELETE tool
-	server.tool(
-		'conf_delete',
-		`Delete Confluence resources. Returns TOON format by default.
+const CONF_DELETE_DESCRIPTION = `Delete Confluence resources. Returns TOON format by default.
 
 **Output format:** TOON (default) or JSON (\`outputFormat: "json"\`)
 
@@ -245,8 +209,71 @@ API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
 
 Note: Most DELETE endpoints return 204 No Content on success.
 
-API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`,
-		DeleteApiToolArgs.shape,
+API reference: https://developer.atlassian.com/cloud/confluence/rest/v2/`;
+
+/**
+ * Register generic Confluence API tools with the MCP server.
+ * Uses the modern registerTool API (SDK v1.22.0+) instead of deprecated tool() method.
+ */
+function registerTools(server: McpServer) {
+	const registerLogger = Logger.forContext(
+		'tools/atlassian.api.tool.ts',
+		'registerTools',
+	);
+	registerLogger.debug('Registering API tools...');
+
+	// Register the GET tool using modern registerTool API
+	server.registerTool(
+		'conf_get',
+		{
+			title: 'Confluence GET Request',
+			description: CONF_GET_DESCRIPTION,
+			inputSchema: GetApiToolArgs,
+		},
+		get,
+	);
+
+	// Register the POST tool using modern registerTool API
+	server.registerTool(
+		'conf_post',
+		{
+			title: 'Confluence POST Request',
+			description: CONF_POST_DESCRIPTION,
+			inputSchema: RequestWithBodyArgs,
+		},
+		post,
+	);
+
+	// Register the PUT tool using modern registerTool API
+	server.registerTool(
+		'conf_put',
+		{
+			title: 'Confluence PUT Request',
+			description: CONF_PUT_DESCRIPTION,
+			inputSchema: RequestWithBodyArgs,
+		},
+		put,
+	);
+
+	// Register the PATCH tool using modern registerTool API
+	server.registerTool(
+		'conf_patch',
+		{
+			title: 'Confluence PATCH Request',
+			description: CONF_PATCH_DESCRIPTION,
+			inputSchema: RequestWithBodyArgs,
+		},
+		patch,
+	);
+
+	// Register the DELETE tool using modern registerTool API
+	server.registerTool(
+		'conf_delete',
+		{
+			title: 'Confluence DELETE Request',
+			description: CONF_DELETE_DESCRIPTION,
+			inputSchema: DeleteApiToolArgs,
+		},
 		del,
 	);
 

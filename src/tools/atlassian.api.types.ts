@@ -37,7 +37,7 @@ const BaseApiToolArgs = {
 	 * Optional query parameters as key-value pairs
 	 */
 	queryParams: z
-		.record(z.string())
+		.record(z.string(), z.string())
 		.optional()
 		.describe(
 			'Optional query parameters as key-value pairs. Examples: {"limit": "25", "cursor": "...", "space-id": "123", "body-format": "storage"}',
@@ -65,7 +65,7 @@ const BaseApiToolArgs = {
  * Body field for requests that include a request body (POST, PUT, PATCH)
  */
 const bodyField = z
-	.record(z.unknown())
+	.record(z.string(), z.unknown())
 	.describe(
 		'Request body as a JSON object. Structure depends on the endpoint. Example for page: {"spaceId": "123", "title": "Page Title", "body": {"representation": "storage", "value": "<p>Content</p>"}}',
 	);
