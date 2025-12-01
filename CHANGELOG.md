@@ -1,3 +1,10 @@
+## [3.2.1](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v3.2.0...v3.2.1) (2025-12-01)
+
+
+### Bug Fixes
+
+* **deps:** regenerate package-lock.json for CI compatibility ([0a826be](https://github.com/aashari/mcp-server-atlassian-confluence/commit/0a826be11880505cf331a5105a8fdf2a28389315))
+
 # [3.2.0](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v3.1.0...v3.2.0) (2025-12-01)
 
 
