@@ -1,6 +1,6 @@
 {
   "name": "@aashari/mcp-server-atlassian-confluence",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Node.js/TypeScript MCP server for Atlassian Confluence. Provides tools enabling AI systems (LLMs) to list/get spaces & pages (content formatted as Markdown) and search via CQL. Connects AI seamlessly to Confluence knowledge bases using the standard MCP interface.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

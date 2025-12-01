@@ -1,3 +1,10 @@
+# [3.2.0](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v3.1.0...v3.2.0) (2025-12-01)
+
+
+### Features
+
+* modernize MCP SDK to v1.23.0 with registerTool API ([021c09f](https://github.com/aashari/mcp-server-atlassian-confluence/commit/021c09fc8956379ad12b025bee278a73f23366e1))
+
 # [3.1.0](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v3.0.0...v3.1.0) (2025-11-30)
 
 
