@@ -9,6 +9,7 @@ import {
 	createNotFoundError,
 	McpError,
 } from './error.util.js';
+import { saveRawResponse } from './response.util.js';
 
 /**
  * Interface for Atlassian API credentials
@@ -26,6 +27,14 @@ export interface RequestOptions {
 	method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	headers?: Record<string, string>;
 	body?: unknown;
+}
+
+/**
+ * Transport response wrapper that includes the data and the path to the raw response file
+ */
+export interface TransportResponse<T> {
+	data: T;
+	rawResponsePath: string | null;
 }
 
 // Create a logger for the utility
@@ -59,13 +68,13 @@ export function getAtlassianCredentials(): AtlassianCredentials | null {
  * @param credentials Atlassian API credentials
  * @param path API endpoint path (without base URL)
  * @param options Request options
- * @returns Response data
+ * @returns Transport response with data and raw response path
  */
 export async function fetchAtlassian<T>(
 	credentials: AtlassianCredentials,
 	path: string,
 	options: RequestOptions = {},
-): Promise<T> {
+): Promise<TransportResponse<T>> {
 	const fetchLogger = Logger.forContext(
 		'utils/transport.util.ts',
 		'fetchAtlassian',
@@ -264,26 +273,40 @@ export async function fetchAtlassian<T>(
 		// Handle 204 No Content responses (common for DELETE operations)
 		if (response.status === 204) {
 			fetchLogger.debug('Received 204 No Content response');
-			return {} as T;
+			return { data: {} as T, rawResponsePath: null };
 		}
 
 		// Handle empty responses (some endpoints return 200/201 with no body)
 		const responseText = await response.text();
 		if (!responseText || responseText.trim() === '') {
 			fetchLogger.debug('Received empty response body');
-			return {} as T;
+			return { data: {} as T, rawResponsePath: null };
 		}
 
 		// For JSON responses, parse the text we already read
 		try {
 			const responseJson = JSON.parse(responseText);
 			fetchLogger.debug(`Response body:`, responseJson);
-			return responseJson as T;
+
+			// Save raw response to file and capture the path
+			const rawResponsePath = saveRawResponse(
+				url,
+				requestOptions.method || 'GET',
+				options.body,
+				responseJson,
+				response.status,
+				parseFloat(requestDuration),
+			);
+
+			return { data: responseJson as T, rawResponsePath };
 		} catch {
 			fetchLogger.debug(
 				`Could not parse response as JSON, returning raw content`,
 			);
-			return responseText as unknown as T;
+			return {
+				data: responseText as unknown as T,
+				rawResponsePath: null,
+			};
 		}
 	} catch (error) {
 		endTime = performance.now();

@@ -98,9 +98,11 @@ describe('Transport Utility', () => {
 				);
 
 				// If the call succeeds, verify the response structure
-				expect(result).toHaveProperty('results');
-				expect(Array.isArray(result.results)).toBe(true);
-				expect(result).toHaveProperty('_links');
+				expect(result).toHaveProperty('data');
+				expect(result).toHaveProperty('rawResponsePath');
+				expect(result.data).toHaveProperty('results');
+				expect(Array.isArray(result.data.results)).toBe(true);
+				expect(result.data).toHaveProperty('_links');
 			} catch (error) {
 				// If API is unavailable, at least check that we're getting a proper McpError
 				expect(error).toBeInstanceOf(McpError);
@@ -154,8 +156,10 @@ describe('Transport Utility', () => {
 				);
 
 				// If the call succeeds, verify the response structure
-				expect(result).toHaveProperty('results');
-				expect(Array.isArray(result.results)).toBe(true);
+				expect(result).toHaveProperty('data');
+				expect(result).toHaveProperty('rawResponsePath');
+				expect(result.data).toHaveProperty('results');
+				expect(Array.isArray(result.data.results)).toBe(true);
 			} catch (error) {
 				// If API is unavailable, at least check that we're getting a proper McpError
 				expect(error).toBeInstanceOf(McpError);
@@ -190,8 +194,10 @@ describe('Transport Utility', () => {
 				);
 
 				// If the call succeeds, verify the response structure
-				expect(result).toHaveProperty('results');
-				expect(Array.isArray(result.results)).toBe(true);
+				expect(result).toHaveProperty('data');
+				expect(result).toHaveProperty('rawResponsePath');
+				expect(result.data).toHaveProperty('results');
+				expect(Array.isArray(result.data.results)).toBe(true);
 			} catch (error) {
 				// If API is unavailable, at least check that we're getting a proper McpError
 				expect(error).toBeInstanceOf(McpError);
