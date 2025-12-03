@@ -1,3 +1,10 @@
+# [3.3.0](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v3.2.1...v3.3.0) (2025-12-03)
+
+
+### Features
+
+* add raw response logging with truncation for large API responses ([cb06cb8](https://github.com/aashari/mcp-server-atlassian-confluence/commit/cb06cb8acdf088f288591a6ecb1b2447e3825c59))
+
 ## [3.2.1](https://github.com/aashari/mcp-server-atlassian-confluence/compare/v3.2.0...v3.2.1) (2025-12-01)
 
 
