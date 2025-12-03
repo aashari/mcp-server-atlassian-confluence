@@ -41,14 +41,23 @@ export ATLASSIAN_SITE_NAME="your-company"  # for your-company.atlassian.net
 export ATLASSIAN_USER_EMAIL="your.email@company.com"
 export ATLASSIAN_API_TOKEN="your_api_token"
 
-# List your Confluence spaces
+# List your Confluence spaces (TOON format by default)
 npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces"
 
-# Get details about a specific space
-npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces/123456"
+# Get details about a specific space with field filtering
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/spaces/123456" \
+  --jq "{id: id, key: key, name: name, type: type}"
 
 # Get a page with JMESPath filtering
-npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/pages/789" --jq "{id: id, title: title, status: status}"
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/pages/789" \
+  --jq "{id: id, title: title, status: status}"
+
+# Search for pages (using CQL)
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/rest/api/search" \
+  --query-params '{"cql": "type=page AND space=DEV"}'
 ```
 
 ## Connect to AI Assistants
@@ -77,13 +86,13 @@ Restart Claude Desktop, and you'll see the confluence server in the status bar.
 
 ### For Other AI Assistants
 
-Most AI assistants support MCP. Install the server globally:
+Most AI assistants support MCP (Cursor AI, Continue.dev, and others). Install the server globally:
 
 ```bash
 npm install -g @aashari/mcp-server-atlassian-confluence
 ```
 
-Then configure your AI assistant to use the MCP server with STDIO transport.
+Then configure your AI assistant to use the MCP server with STDIO transport. The binary is available as `mcp-atlassian-confluence` after global installation.
 
 ### Alternative: Configuration File
 
@@ -103,6 +112,25 @@ Create `~/.mcp/configs.json` for system-wide configuration:
 
 **Alternative config keys:** The system also accepts `"atlassian-confluence"`, `"@aashari/mcp-server-atlassian-confluence"`, or `"mcp-server-atlassian-confluence"` instead of `"confluence"`.
 
+### Using Environment Variables
+
+You can also configure credentials using environment variables or a `.env` file:
+
+```bash
+# Create a .env file in your project directory
+cat > .env << EOF
+ATLASSIAN_SITE_NAME=your-company
+ATLASSIAN_USER_EMAIL=your.email@company.com
+ATLASSIAN_API_TOKEN=your_api_token
+DEBUG=false
+EOF
+```
+
+The server will automatically load these values from:
+1. Environment variables
+2. `.env` file in the current directory
+3. `~/.mcp/configs.json` (as shown above)
+
 ## Available Tools
 
 This MCP server provides 5 generic tools that can access any Confluence API endpoint:
@@ -112,8 +140,21 @@ This MCP server provides 5 generic tools that can access any Confluence API endp
 | `conf_get` | GET any Confluence API endpoint (read data) |
 | `conf_post` | POST to any endpoint (create resources) |
 | `conf_put` | PUT to any endpoint (replace resources) |
-| `conf_patch` | PATCH any endpoint (partial updates) |
-| `conf_delete` | DELETE any endpoint (remove resources) |
+| `conf_patch` | PATCH to any endpoint (partial updates) |
+| `conf_delete` | DELETE from any endpoint (remove resources) |
+
+### Tool Parameters
+
+All tools share these common parameters:
+
+- **`path`** (required): The API endpoint path (e.g., `/wiki/api/v2/spaces`)
+- **`queryParams`** (optional): Query parameters as key-value pairs (e.g., `{"limit": "25", "space-id": "123"}`)
+- **`jq`** (optional): JMESPath expression to filter/transform the response (e.g., `results[*].{id: id, title: title}`)
+- **`outputFormat`** (optional): Output format - `"toon"` (default, 30-60% fewer tokens) or `"json"`
+
+Tools that accept a request body (`conf_post`, `conf_put`, `conf_patch`):
+
+- **`body`** (required): Request body as a JSON object
 
 ### Common API Paths
 
@@ -140,9 +181,37 @@ This MCP server provides 5 generic tools that can access any Confluence API endp
 **Search:**
 - `/wiki/rest/api/search` - Search content (use `cql` query param)
 
+### TOON Output Format
+
+**What is TOON?** TOON (Token-Oriented Object Notation) is a format optimized for LLM token efficiency, reducing token costs by 30-60% compared to JSON. It's the default output format for all tools.
+
+**Benefits:**
+- Tabular arrays use fewer tokens than JSON arrays
+- Minimal syntax overhead (no quotes, brackets, commas where unnecessary)
+- Still human-readable and parseable
+
+**When to use JSON instead:**
+- When you need standard JSON for other tools
+- When debugging or manual inspection is needed
+
+**Example comparison:**
+```json
+// JSON format (verbose)
+{"results": [{"id": "123", "title": "My Page"}, {"id": "456", "title": "Other Page"}]}
+
+// TOON format (efficient)
+results:
+  - id: 123
+    title: My Page
+  - id: 456
+    title: Other Page
+```
+
+To use JSON instead of TOON, set `outputFormat: "json"` in your request.
+
 ### JMESPath Filtering
 
-All tools support optional JMESPath (`jq`) filtering to extract specific data:
+All tools support optional JMESPath (`jq`) filtering to extract specific data and reduce token costs:
 
 ```bash
 # Get just space names and keys
@@ -155,6 +224,17 @@ npx -y @aashari/mcp-server-atlassian-confluence get \
   --path "/wiki/api/v2/pages/123456" \
   --jq "{id: id, title: title, status: status}"
 ```
+
+**IMPORTANT:** Always use the `jq` parameter to filter responses to only the fields you need. Unfiltered responses can be very large and expensive in token costs.
+
+**JMESPath Syntax Reference:**
+- Official docs: [jmespath.org](https://jmespath.org)
+- Common patterns:
+  - `results[*]` - All items in results array
+  - `results[0]` - First item only
+  - `results[*].id` - Just IDs from all items
+  - `results[*].{id: id, title: title}` - Create objects with selected fields
+  - `results[?status=='current']` - Filter by condition
 
 ## Real-World Examples
 
@@ -191,16 +271,43 @@ Ask your AI assistant:
 
 ## CLI Commands
 
-The CLI mirrors the MCP tools for direct terminal access:
+The CLI mirrors the MCP tools for direct terminal access. All commands support the same parameters as the tools.
+
+### Available Commands
+
+- `get` - GET any Confluence endpoint
+- `post` - POST to any endpoint
+- `put` - PUT to any endpoint
+- `patch` - PATCH any endpoint
+- `delete` - DELETE from any endpoint
+
+### CLI Parameters
+
+**All commands:**
+- `-p, --path <path>` (required) - API endpoint path
+- `-q, --query-params <json>` (optional) - Query parameters as JSON
+- `--jq <expression>` (optional) - JMESPath filter expression
+- `-o, --output-format <format>` (optional) - Output format: `toon` (default) or `json`
+
+**Commands with body (post, put, patch):**
+- `-b, --body <json>` (required) - Request body as JSON
+
+### Examples
 
 ```bash
 # GET request
 npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces"
 
-# GET with query parameters
+# GET with query parameters and JMESPath filter
 npx -y @aashari/mcp-server-atlassian-confluence get \
   --path "/wiki/api/v2/pages" \
-  --query-params '{"space-id": "123456", "limit": "10"}'
+  --query-params '{"space-id": "123456", "limit": "10"}' \
+  --jq "results[*].{id: id, title: title}"
+
+# GET with JSON output format
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/spaces" \
+  --output-format json
 
 # POST request (create a page)
 npx -y @aashari/mcp-server-atlassian-confluence post \
@@ -217,9 +324,128 @@ npx -y @aashari/mcp-server-atlassian-confluence put \
   --path "/wiki/api/v2/pages/789" \
   --body '{"id": "789", "status": "current", "title": "Updated Title", "spaceId": "123456", "body": {"representation": "storage", "value": "<p>Updated content</p>"}, "version": {"number": 2}}'
 
+# PATCH request (partial update)
+npx -y @aashari/mcp-server-atlassian-confluence patch \
+  --path "/wiki/api/v2/spaces/123456" \
+  --body '{"name": "New Space Name"}'
+
 # DELETE request
 npx -y @aashari/mcp-server-atlassian-confluence delete \
   --path "/wiki/api/v2/pages/789"
+```
+
+## Response Handling
+
+### Large Response Truncation
+
+When API responses exceed approximately 40,000 characters (~10,000 tokens), the server automatically truncates the response to stay within token limits. When this happens:
+
+1. **You'll see a truncation notice** at the end of the response showing:
+   - How much of the original response is shown
+   - The original response size
+   - Guidance on accessing the full data
+
+2. **The full raw response is saved** to a temporary file in `/tmp/mcp/` (path provided in the truncation notice)
+
+3. **Best practices to avoid truncation:**
+   - **Always use the `jq` parameter** to filter responses to only needed fields
+   - Use `limit` query parameter to restrict result counts (e.g., `{"limit": "5"}`)
+   - Request specific resources by ID rather than listing all
+   - Use targeted CQL queries for searches
+
+**Example of efficient filtering:**
+```bash
+# Instead of getting all space data (can be huge):
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/spaces"
+
+# Get only the fields you need:
+npx -y @aashari/mcp-server-atlassian-confluence get \
+  --path "/wiki/api/v2/spaces" \
+  --query-params '{"limit": "10"}' \
+  --jq "results[*].{id: id, key: key, name: name}"
+```
+
+### Debug Logging
+
+Enable debug logging to see detailed request/response information:
+
+```bash
+# Set DEBUG environment variable
+export DEBUG=true
+
+# For MCP mode
+DEBUG=true npx -y @aashari/mcp-server-atlassian-confluence
+
+# For CLI mode
+DEBUG=true npx -y @aashari/mcp-server-atlassian-confluence get --path "/wiki/api/v2/spaces"
+```
+
+Debug logs are written to: `~/.mcp/data/@aashari-mcp-server-atlassian-confluence.[session-id].log`
+
+## Testing & Development
+
+### Using MCP Inspector
+
+The MCP Inspector provides a visual interface for testing tools:
+
+```bash
+# Install the server globally
+npm install -g @aashari/mcp-server-atlassian-confluence
+
+# Run with MCP Inspector
+npx @modelcontextprotocol/inspector node $(which mcp-atlassian-confluence)
+```
+
+Or use the built-in development command if you've cloned the repository:
+
+```bash
+npm run mcp:inspect
+```
+
+This starts the server in HTTP mode and opens the inspector UI in your browser.
+
+### HTTP Mode for Testing
+
+You can run the server in HTTP mode to test with curl or other HTTP clients:
+
+```bash
+# Start server in HTTP mode
+TRANSPORT_MODE=http npx -y @aashari/mcp-server-atlassian-confluence
+```
+
+The server will listen on `http://localhost:3000/mcp` by default. You can change the port:
+
+```bash
+PORT=8080 TRANSPORT_MODE=http npx -y @aashari/mcp-server-atlassian-confluence
+```
+
+**Testing with curl:**
+
+```bash
+# Initialize session
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "clientInfo": {"name": "curl-test", "version": "1.0.0"}, "capabilities": {}}}'
+
+# List available tools
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc": "2.0", "id": 2, "method": "tools/list"}'
+
+# Call a tool
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "conf_get", "arguments": {"path": "/wiki/api/v2/spaces", "queryParams": {"limit": "5"}}}}'
+```
+
+The response comes as Server-Sent Events (SSE) with format:
+```
+event: message
+data: {"jsonrpc": "2.0", "id": 1, "result": {...}}
 ```
 
 ## Troubleshooting
@@ -338,6 +564,53 @@ conf_get, conf_post, conf_put, conf_patch, conf_delete
 - `conf_get_page` -> `conf_get` with path `/wiki/api/v2/pages/{id}`
 - `conf_search` -> `conf_get` with path `/wiki/rest/api/search?cql=...`
 - `conf_add_comment` -> `conf_post` with path `/wiki/api/v2/pages/{id}/footer-comments`
+
+## Technical Details
+
+### Requirements
+
+- **Node.js**: 18.0.0 or higher
+- **MCP SDK**: 1.23.0 (uses modern `registerTool` API)
+- **Confluence**: Cloud only (Server/Data Center not supported)
+
+### Architecture
+
+This server follows a 5-layer architecture:
+
+1. **Tools Layer** (`src/tools/`) - MCP tool definitions with Zod validation
+2. **CLI Layer** (`src/cli/`) - Commander-based CLI for direct testing
+3. **Controllers Layer** (`src/controllers/`) - Business logic, JMESPath filtering, output formatting
+4. **Services Layer** (`src/services/`) - Confluence API communication
+5. **Utils Layer** (`src/utils/`) - Shared utilities (logger, config, formatters, TOON encoder)
+
+### Features
+
+- **Generic HTTP method tools** - Access any Confluence API endpoint
+- **TOON output format** - 30-60% token reduction vs JSON
+- **JMESPath filtering** - Extract only needed data
+- **Response truncation** - Automatic handling of large responses
+- **Raw response logging** - Full responses saved to `/tmp/mcp/`
+- **Dual transport** - STDIO (for Claude Desktop) and HTTP (for web integrations)
+- **Debug logging** - Comprehensive logging for troubleshooting
+
+### Version History
+
+**v3.2.1** (Current)
+- Add raw response logging with truncation for large API responses
+- Improve dependency compatibility
+
+**v3.2.0**
+- Modernize MCP SDK to v1.23.0 with registerTool API
+
+**v3.1.0**
+- Add TOON output format for token-efficient LLM responses
+
+**v3.0.0** (Breaking change)
+- Replace 8+ domain-specific tools with 5 generic HTTP method tools
+- Add JMESPath filtering support
+- Full Confluence API access via generic methods
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Support
 
