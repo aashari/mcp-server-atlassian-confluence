@@ -60,6 +60,10 @@ npx -y @aashari/mcp-server-atlassian-confluence get \
   --query-params '{"cql": "type=page AND space=DEV"}'
 ```
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/aashari-mcp-server-atlassian-confluence).
+
 ## Connect to AI Assistants
 
 ### For Claude Desktop Users
